@@ -1,15 +1,10 @@
 import "./App.css";
+import myGif from "./assets/000102401.gif";
 
 function App() {
-  return (
-    <>
-      <p>hello world</p>
-      <img
-        src="https://media.tenor.com/47WAzOr8LT0AAAAj/spinning-pomodoro.gif"
-        className="center"
-      ></img>
-    </>
-  );
+  return <img src={myGif} alt="Loading animation"></img>;
 }
 
 export default App;
+{
+}
