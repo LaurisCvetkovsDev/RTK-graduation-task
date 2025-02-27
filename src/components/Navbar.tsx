@@ -1,4 +1,3 @@
-import React from "react";
 import myGif from "../assets/000102401.gif";
 import "bootstrap/dist/css/bootstrap.min.css";
 
