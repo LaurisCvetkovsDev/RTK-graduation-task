@@ -5,7 +5,14 @@ import Settings from "./Settings";
 
 function CountdownTimer() {
   const [isRunning, setIsRunning] = useState(false);
-  const { timerDuration, setTimerDuration } = usePomodoroStore();
+  const {
+    timerDuration,
+    setTimerDuration,
+    isWorkPhase,
+    togglePhase,
+    workDuration,
+    restDuration,
+  } = usePomodoroStore();
   const [elapsedTime, setElapsedTime] = useState(timerDuration * 60 * 1000);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const intervalIdRef = useRef<number | null>(null);
@@ -14,25 +21,78 @@ function CountdownTimer() {
     (state: PomodoroState) => state.incrementCount
   );
   const initialTimeRef = useRef(timerDuration * 60 * 1000);
+  const totalSetTimeRef = useRef(timerDuration * 60 * 1000);
+  const [remainingWorkPeriods, setRemainingWorkPeriods] = useState(0);
+  const [timeUntilRest, setTimeUntilRest] = useState(workDuration * 60 * 1000);
+
+  // Calculate remaining work periods
+  const calculateRemainingWorkPeriods = (
+    totalTime: number,
+    currentElapsed: number
+  ) => {
+    const totalMinutes = Math.floor(totalTime / (60 * 1000));
+    const elapsedMinutes = Math.floor(currentElapsed / (60 * 1000));
+    const remainingMinutes = totalMinutes - elapsedMinutes;
+
+    // Calculate how many complete work periods can fit in remaining time
+    const workPeriods = Math.floor(
+      remainingMinutes / (workDuration + restDuration)
+    );
+    const remainingTimeAfterFullPeriods =
+      remainingMinutes % (workDuration + restDuration);
+
+    // Add one if there's enough time for a partial work period
+    const additionalPeriod =
+      remainingTimeAfterFullPeriods >= workDuration ? 1 : 0;
+
+    return workPeriods + additionalPeriod;
+  };
+
+  // Calculate time until next rest
+  const calculateTimeUntilRest = (currentElapsed: number) => {
+    const cycleTime = (workDuration + restDuration) * 60 * 1000;
+    const timeInCurrentCycle = currentElapsed % cycleTime;
+
+    if (timeInCurrentCycle < workDuration * 60 * 1000) {
+      // In work phase
+      return workDuration * 60 * 1000 - timeInCurrentCycle;
+    } else {
+      // In rest phase
+      return 0;
+    }
+  };
 
   // Update elapsed time when timer duration changes
   useEffect(() => {
     setElapsedTime(timerDuration * 60 * 1000);
     initialTimeRef.current = timerDuration * 60 * 1000;
+    totalSetTimeRef.current = timerDuration * 60 * 1000;
+    setRemainingWorkPeriods(
+      calculateRemainingWorkPeriods(timerDuration * 60 * 1000, 0)
+    );
+    setTimeUntilRest(workDuration * 60 * 1000);
   }, [timerDuration]);
 
   const handleTimerEnd = () => {
     if (localStorage.getItem("timerUpdated") === "true") return;
     localStorage.setItem("timerUpdated", "true");
 
-    // Calculate completed minutes
-    const completedMinutes = Math.floor(
-      (initialTimeRef.current - elapsedTime) / (60 * 1000)
-    );
-    if (completedMinutes > 0) {
-      incrementCount(completedMinutes);
-      POMODOROdone.current.play();
+    // Calculate completed minutes only during work phase
+    if (isWorkPhase) {
+      const completedMinutes = Math.floor(
+        (initialTimeRef.current - elapsedTime) / (60 * 1000)
+      );
+      if (completedMinutes > 0) {
+        incrementCount(completedMinutes);
+        POMODOROdone.current.play();
+      }
     }
+
+    // Toggle phase and reset timer
+    togglePhase();
+    setElapsedTime(timerDuration * 60 * 1000);
+    initialTimeRef.current = timerDuration * 60 * 1000;
+    setTimeUntilRest(isWorkPhase ? 0 : workDuration * 60 * 1000);
 
     setTimeout(() => {
       localStorage.removeItem("timerUpdated");
@@ -48,7 +108,18 @@ function CountdownTimer() {
             handleTimerEnd();
             return 0;
           }
-          return prev - 10;
+          const newTime = prev - 10;
+          // Update remaining work periods and time until rest
+          setRemainingWorkPeriods(
+            calculateRemainingWorkPeriods(
+              totalSetTimeRef.current,
+              totalSetTimeRef.current - newTime
+            )
+          );
+          setTimeUntilRest(
+            calculateTimeUntilRest(totalSetTimeRef.current - newTime)
+          );
+          return newTime;
         });
       }, 10);
     } else {
@@ -68,12 +139,14 @@ function CountdownTimer() {
 
   function stop() {
     if (isRunning) {
-      // Calculate completed minutes when stopping manually
-      const completedMinutes = Math.floor(
-        (initialTimeRef.current - elapsedTime) / (60 * 1000)
-      );
-      if (completedMinutes > 0) {
-        incrementCount(completedMinutes);
+      // Calculate completed minutes only during work phase
+      if (isWorkPhase) {
+        const completedMinutes = Math.floor(
+          (initialTimeRef.current - elapsedTime) / (60 * 1000)
+        );
+        if (completedMinutes > 0) {
+          incrementCount(completedMinutes);
+        }
       }
     }
     setIsRunning(false);
@@ -82,13 +155,18 @@ function CountdownTimer() {
   function reset() {
     setElapsedTime(timerDuration * 60 * 1000);
     initialTimeRef.current = timerDuration * 60 * 1000;
+    totalSetTimeRef.current = timerDuration * 60 * 1000;
+    setRemainingWorkPeriods(
+      calculateRemainingWorkPeriods(timerDuration * 60 * 1000, 0)
+    );
+    setTimeUntilRest(workDuration * 60 * 1000);
     setIsRunning(false);
   }
 
-  function formatTime() {
-    const minutes = Math.floor(elapsedTime / 60000);
-    const seconds = Math.floor((elapsedTime % 60000) / 1000);
-    const milliseconds = Math.floor((elapsedTime % 1000) / 10);
+  function formatTime(timeInMs: number) {
+    const minutes = Math.floor(timeInMs / 60000);
+    const seconds = Math.floor((timeInMs % 60000) / 1000);
+    const milliseconds = Math.floor((timeInMs % 1000) / 10);
 
     return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
       2,
@@ -99,7 +177,32 @@ function CountdownTimer() {
   return (
     <>
       <div className="stopWatch">
-        <div className="display">{formatTime()}</div>
+        <div
+          className="phase-indicator"
+          style={{
+            color: isWorkPhase ? "#ff6b6b" : "#4a90e2",
+            marginBottom: "10px",
+            fontSize: "1.2rem",
+          }}
+        >
+          {isWorkPhase ? "Work Time" : "Rest Time"}
+        </div>
+        <div className="display">
+          {isWorkPhase
+            ? formatTime(timeUntilRest)
+            : formatTime(restDuration * 60 * 1000)}
+        </div>
+        <div
+          className="remaining-periods"
+          style={{
+            color: "wheat",
+            marginBottom: "15px",
+            fontSize: "1.1rem",
+          }}
+        >
+          {remainingWorkPeriods} work period
+          {remainingWorkPeriods !== 1 ? "s" : ""} remaining
+        </div>
         <div className="controls">
           <button onClick={start} className="start-button btn btn-primary">
             Start
