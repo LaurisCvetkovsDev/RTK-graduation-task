@@ -1,5 +1,6 @@
 import React from "react";
 import { usePomodoroStore } from "../store/pomodoroStore";
+import gif102401 from "../assets/000102401.gif";
 
 const Friends = () => {
   const totalCount = usePomodoroStore((state) => state.totalCount);
@@ -16,7 +17,15 @@ const Friends = () => {
       <h2 className="mb-4">Friends Leaderboard</h2>
       <div className="your-stats mb-4">
         <h3>Your Progress</h3>
-        <p>Total Pomodoros: {totalCount}</p>
+        <p>
+          Total{" "}
+          <img
+            src={gif102401}
+            alt="gif"
+            style={{ height: "30px", width: "auto" }}
+          />
+          : {totalCount}
+        </p>
       </div>
       <div className="friends-list">
         <h3>Friends</h3>
@@ -25,7 +34,14 @@ const Friends = () => {
             <div key={index} className="list-group-item glass-item">
               <div className="d-flex justify-content-between align-items-center">
                 <span>{friend.name}</span>
-                <span>{friend.pomodoros} Pomodoros</span>
+                <span>
+                  {friend.pomodoros}{" "}
+                  <img
+                    src={gif102401}
+                    alt="gif"
+                    style={{ height: "30px", width: "auto" }}
+                  />
+                </span>
               </div>
             </div>
           ))}

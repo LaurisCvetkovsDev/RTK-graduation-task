@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { usePomodoroStore } from "../store/pomodoroStore";
+import gif102401 from "../assets/000102401.gif";
 
 interface GoalSettingsProps {
   isOpen: boolean;
@@ -32,7 +33,15 @@ const GoalSettings: React.FC<GoalSettingsProps> = ({ isOpen, onClose }) => {
         </div>
         <div className="settings-content">
           <div className="setting-item">
-            <label>Daily Goal (pomodoros)</label>
+            <label>
+              Daily Goal (
+              <img
+                src={gif102401}
+                alt="gif"
+                style={{ height: "20px", width: "auto" }}
+              />
+              )
+            </label>
             <input
               type="number"
               min="1"

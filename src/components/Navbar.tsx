@@ -1,25 +1,14 @@
 import React from "react";
-import myGif from "../assets/000102401.gif";
+import compGif from "../assets/Comp 1.gif";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { usePomodoroStore } from "../store/pomodoroStore";
 
 const Navbar = () => {
-  const totalCount = usePomodoroStore((state) => state.totalCount);
-
   return (
     <nav className="glass-navbar">
       <div className="text-center">
-        <div className="row align-items-start">
+        <div className="row align-items-center">
           <div className="col">
-            <h1>You have done {totalCount} POMODOROS</h1>
-          </div>
-          <div className="col">
-            <img
-              src={myGif}
-              alt="Bootstrap"
-              width="100"
-              className="img-fluid"
-            />
+            <img src={compGif} alt="Animation" className="navbar-gif" />
           </div>
         </div>
       </div>

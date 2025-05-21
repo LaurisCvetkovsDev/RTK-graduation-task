@@ -1,5 +1,6 @@
 import React from "react";
 import { usePomodoroStore } from "../store/pomodoroStore";
+import gif102401 from "../assets/000102401.gif";
 
 const Stats = () => {
   const { totalCount, dailyCount, dailyGoal } = usePomodoroStore();
@@ -33,7 +34,14 @@ const Stats = () => {
         </div>
 
         <div className="stat-card glass-item">
-          <h3>Total Pomodoros</h3>
+          <h3>
+            Total{" "}
+            <img
+              src={gif102401}
+              alt="gif"
+              style={{ height: "30px", width: "auto" }}
+            />
+          </h3>
           <div className="stat-value">{totalCount}</div>
           <div className="stat-label">Lifetime Achievement</div>
         </div>

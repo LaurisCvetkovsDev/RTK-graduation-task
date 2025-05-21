@@ -13,18 +13,26 @@ function CountdownTimer() {
   const incrementCount = usePomodoroStore(
     (state: PomodoroState) => state.incrementCount
   );
+  const initialTimeRef = useRef(timerDuration * 60 * 1000);
 
   // Update elapsed time when timer duration changes
   useEffect(() => {
     setElapsedTime(timerDuration * 60 * 1000);
+    initialTimeRef.current = timerDuration * 60 * 1000;
   }, [timerDuration]);
 
   const handleTimerEnd = () => {
     if (localStorage.getItem("timerUpdated") === "true") return;
     localStorage.setItem("timerUpdated", "true");
 
-    incrementCount();
-    POMODOROdone.current.play();
+    // Calculate completed minutes
+    const completedMinutes = Math.floor(
+      (initialTimeRef.current - elapsedTime) / (60 * 1000)
+    );
+    if (completedMinutes > 0) {
+      incrementCount(completedMinutes);
+      POMODOROdone.current.play();
+    }
 
     setTimeout(() => {
       localStorage.removeItem("timerUpdated");
@@ -52,15 +60,31 @@ function CountdownTimer() {
   }, [isRunning]);
 
   function start() {
-    if (elapsedTime > 0) setIsRunning(true);
+    if (elapsedTime > 0) {
+      setIsRunning(true);
+      initialTimeRef.current = elapsedTime;
+    }
   }
+
   function stop() {
+    if (isRunning) {
+      // Calculate completed minutes when stopping manually
+      const completedMinutes = Math.floor(
+        (initialTimeRef.current - elapsedTime) / (60 * 1000)
+      );
+      if (completedMinutes > 0) {
+        incrementCount(completedMinutes);
+      }
+    }
     setIsRunning(false);
   }
+
   function reset() {
     setElapsedTime(timerDuration * 60 * 1000);
+    initialTimeRef.current = timerDuration * 60 * 1000;
     setIsRunning(false);
   }
+
   function formatTime() {
     const minutes = Math.floor(elapsedTime / 60000);
     const seconds = Math.floor((elapsedTime % 60000) / 1000);
