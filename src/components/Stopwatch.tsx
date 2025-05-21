@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { usePomodoroStore } from "../store/pomodoroStore";
 import type { PomodoroState } from "../store/pomodoroStore";
 import Settings from "./Settings";
+import { sessionService } from "../services/api";
+import { PomodoroSession } from "../types";
 
 function CountdownTimer() {
   const [isRunning, setIsRunning] = useState(false);
@@ -24,43 +26,40 @@ function CountdownTimer() {
   const totalSetTimeRef = useRef(timerDuration * 60 * 1000);
   const [remainingWorkPeriods, setRemainingWorkPeriods] = useState(0);
   const [timeUntilRest, setTimeUntilRest] = useState(workDuration * 60 * 1000);
+  const [completedMinutes, setCompletedMinutes] = useState(0);
+  const [userInput, setUserInput] = useState("");
+  const [error, setError] = useState("");
+
+  // Mock user ID - replace with actual user ID from auth context
+  const userId = 1;
 
   // Calculate remaining work periods
-  const calculateRemainingWorkPeriods = (
-    totalTime: number,
-    currentElapsed: number
-  ) => {
-    const totalMinutes = Math.floor(totalTime / (60 * 1000));
-    const elapsedMinutes = Math.floor(currentElapsed / (60 * 1000));
-    const remainingMinutes = totalMinutes - elapsedMinutes;
+  const calculateRemainingWorkPeriods = useCallback((totalMinutes: number) => {
+    const workPeriodDuration = 25;
+    const restPeriodDuration = 5;
+    const totalPeriodDuration = workPeriodDuration + restPeriodDuration;
 
-    // Calculate how many complete work periods can fit in remaining time
-    const workPeriods = Math.floor(
-      remainingMinutes / (workDuration + restDuration)
-    );
-    const remainingTimeAfterFullPeriods =
-      remainingMinutes % (workDuration + restDuration);
+    const completeCycles = Math.floor(totalMinutes / totalPeriodDuration);
+    const remainingMinutes = totalMinutes % totalPeriodDuration;
 
-    // Add one if there's enough time for a partial work period
-    const additionalPeriod =
-      remainingTimeAfterFullPeriods >= workDuration ? 1 : 0;
+    let remainingPeriods = completeCycles * 2; // Each cycle has 2 periods (work + rest)
 
-    return workPeriods + additionalPeriod;
-  };
+    if (remainingMinutes > 0) {
+      remainingPeriods += 1; // Add the current period
+      if (remainingMinutes > workPeriodDuration) {
+        remainingPeriods += 1; // Add the rest period if we're in it
+      }
+    }
+
+    return remainingPeriods;
+  }, []);
 
   // Calculate time until next rest
-  const calculateTimeUntilRest = (currentElapsed: number) => {
-    const cycleTime = (workDuration + restDuration) * 60 * 1000;
-    const timeInCurrentCycle = currentElapsed % cycleTime;
-
-    if (timeInCurrentCycle < workDuration * 60 * 1000) {
-      // In work phase
-      return workDuration * 60 * 1000 - timeInCurrentCycle;
-    } else {
-      // In rest phase
-      return 0;
-    }
-  };
+  const calculateTimeUntilRest = useCallback((currentTime: number) => {
+    const workPeriodDuration = 25 * 60; // 25 minutes in seconds
+    const timeInCurrentPeriod = currentTime % workPeriodDuration;
+    return workPeriodDuration - timeInCurrentPeriod;
+  }, []);
 
   // Update elapsed time when timer duration changes
   useEffect(() => {
@@ -68,7 +67,7 @@ function CountdownTimer() {
     initialTimeRef.current = timerDuration * 60 * 1000;
     totalSetTimeRef.current = timerDuration * 60 * 1000;
     setRemainingWorkPeriods(
-      calculateRemainingWorkPeriods(timerDuration * 60 * 1000, 0)
+      calculateRemainingWorkPeriods(timerDuration * 60 * 1000)
     );
     setTimeUntilRest(workDuration * 60 * 1000);
   }, [timerDuration]);
@@ -110,15 +109,8 @@ function CountdownTimer() {
           }
           const newTime = prev - 10;
           // Update remaining work periods and time until rest
-          setRemainingWorkPeriods(
-            calculateRemainingWorkPeriods(
-              totalSetTimeRef.current,
-              totalSetTimeRef.current - newTime
-            )
-          );
-          setTimeUntilRest(
-            calculateTimeUntilRest(totalSetTimeRef.current - newTime)
-          );
+          setRemainingWorkPeriods(calculateRemainingWorkPeriods(newTime));
+          setTimeUntilRest(calculateTimeUntilRest(newTime));
           return newTime;
         });
       }, 10);
@@ -157,7 +149,7 @@ function CountdownTimer() {
     initialTimeRef.current = timerDuration * 60 * 1000;
     totalSetTimeRef.current = timerDuration * 60 * 1000;
     setRemainingWorkPeriods(
-      calculateRemainingWorkPeriods(timerDuration * 60 * 1000, 0)
+      calculateRemainingWorkPeriods(timerDuration * 60 * 1000)
     );
     setTimeUntilRest(workDuration * 60 * 1000);
     setIsRunning(false);
@@ -173,6 +165,50 @@ function CountdownTimer() {
       "0"
     )}:${String(milliseconds).padStart(2, "0")}`;
   }
+
+  const handleStart = () => {
+    if (!userInput) {
+      setError("Please enter a duration");
+      return;
+    }
+    const minutes = parseInt(userInput);
+    if (isNaN(minutes) || minutes <= 0) {
+      setError("Please enter a valid duration");
+      return;
+    }
+    setError("");
+    setIsRunning(true);
+    setRemainingWorkPeriods(calculateRemainingWorkPeriods(minutes));
+  };
+
+  const handleStop = async () => {
+    setIsRunning(false);
+
+    // Save the session to the backend
+    try {
+      const session: Omit<PomodoroSession, "id"> = {
+        user_id: userId,
+        start_time: new Date(Date.now() - elapsedTime / 1000).toISOString(),
+        end_time: new Date().toISOString(),
+        duration: elapsedTime,
+        is_completed: completedMinutes >= 25,
+      };
+
+      await sessionService.createSession(session);
+    } catch (err) {
+      console.error("Failed to save session:", err);
+    }
+
+    // Reset the timer
+    setElapsedTime(timerDuration * 60 * 1000);
+    initialTimeRef.current = timerDuration * 60 * 1000;
+    setRemainingWorkPeriods(
+      calculateRemainingWorkPeriods(timerDuration * 60 * 1000)
+    );
+    setTimeUntilRest(workDuration * 60 * 1000);
+    setCompletedMinutes(0);
+    setUserInput("");
+  };
 
   return (
     <>

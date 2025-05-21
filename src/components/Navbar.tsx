@@ -1,15 +1,74 @@
 import React from "react";
-import compGif from "../assets/Comp 1.gif";
-import "bootstrap/dist/css/bootstrap.min.css";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import gif102401 from "../assets/000102401.gif";
 
-const Navbar = () => {
+const Navbar: React.FC = () => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <nav className="glass-navbar">
-      <div className="text-center">
-        <div className="row align-items-center">
-          <div className="col">
-            <img src={compGif} alt="Animation" className="navbar-gif" />
-          </div>
+      <div className="row w-100">
+        <div className="col-md-4">
+          <Link to="/" className="navbar-brand">
+            <img src={gif102401} alt="Logo" className="navbar-gif" />
+          </Link>
+        </div>
+        <div className="col-md-4 text-center">
+          <h1 className="mb-0" style={{ color: "wheat" }}>
+            Pomodoro App
+          </h1>
+        </div>
+        <div className="col-md-4 text-end">
+          {user ? (
+            <div className="d-flex align-items-center justify-content-end">
+              <span className="me-3" style={{ color: "wheat" }}>
+                Welcome, {user.username}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="btn btn-outline-light"
+                style={{
+                  backgroundColor: "wheat",
+                  borderColor: "black",
+                  color: "black",
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div className="d-flex gap-2 justify-content-end">
+              <Link
+                to="/login"
+                className="btn btn-outline-light"
+                style={{
+                  backgroundColor: "wheat",
+                  borderColor: "black",
+                  color: "black",
+                }}
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                className="btn btn-outline-light"
+                style={{
+                  backgroundColor: "wheat",
+                  borderColor: "black",
+                  color: "black",
+                }}
+              >
+                Register
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </nav>
