@@ -1,35 +1,30 @@
-import React, { useState, useEffect } from "react";
-
-const heveToBeDone = 5;
+import React, { useRef } from "react";
+import { usePomodoroStore } from "../store/pomodoroStore";
 
 function Goal() {
-  const [timerCount, setTimerCount] = useState(
-    parseInt(localStorage.getItem("timerCount") || "0") - 1
-  );
+  const { dailyCount, dailyGoal, resetDailyCount } = usePomodoroStore();
+  const hasReached = useRef(false);
+  const GOALdone = useRef(new Audio("./sounds/GOALdone2.mp3"));
 
-  useEffect(() => {
-    const updateCount = () => {
-      setTimerCount(parseInt(localStorage.getItem("timerCount") || "0"));
-    };
-
-    const interval = setInterval(updateCount, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  function clearHandler() {
-    localStorage.removeItem("timerCount");
-    setTimerCount(0); // ✅ Manually update state so UI refreshes
+  // Check if goal is reached
+  if (dailyCount >= dailyGoal && !hasReached.current) {
+    GOALdone.current.play();
+    hasReached.current = true;
   }
 
   return (
     <div className="Goal">
-      <button onClick={clearHandler} className="reset-button btn btn-primary">
-        Clear
-      </button>
-      <p>
-        {timerCount}/{heveToBeDone}
+      <p className="GoalText">
+        {dailyCount}/{dailyGoal}
       </p>
+      <div className="controls">
+        <button
+          onClick={resetDailyCount}
+          className="reset-button btn btn-primary"
+        >
+          Clear
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,21 +1,34 @@
 import React, { useState, useEffect, useRef } from "react";
+import { usePomodoroStore } from "../store/pomodoroStore";
+import type { PomodoroState } from "../store/pomodoroStore";
+import Settings from "./Settings";
 
 function CountdownTimer() {
   const [isRunning, setIsRunning] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(50 * 60 * 1000);
+  const { timerDuration, setTimerDuration } = usePomodoroStore();
+  const [elapsedTime, setElapsedTime] = useState(timerDuration * 60 * 1000);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const intervalIdRef = useRef<number | null>(null);
-  let POMODOROdone = new Audio("./sounds/POMODOROdone2-1.mp3");
+  const POMODOROdone = useRef(new Audio("./sounds/POMODOROdone2-1.mp3"));
+  const incrementCount = usePomodoroStore(
+    (state: PomodoroState) => state.incrementCount
+  );
 
-  // Track whether handleTimerEnd has already been called
-  const hasEnded = useRef(false);
+  // Update elapsed time when timer duration changes
+  useEffect(() => {
+    setElapsedTime(timerDuration * 60 * 1000);
+  }, [timerDuration]);
 
   const handleTimerEnd = () => {
-    if (hasEnded.current) return; // Prevent multiple calls
-    hasEnded.current = true; // Mark as called
+    if (localStorage.getItem("timerUpdated") === "true") return;
+    localStorage.setItem("timerUpdated", "true");
 
-    const currentCount = parseInt(localStorage.getItem("timerCount") || "0");
-    const newCount = currentCount + 1;
-    localStorage.setItem("timerCount", newCount.toString());
+    incrementCount();
+    POMODOROdone.current.play();
+
+    setTimeout(() => {
+      localStorage.removeItem("timerUpdated");
+    }, 2000);
   };
 
   useEffect(() => {
@@ -24,41 +37,30 @@ function CountdownTimer() {
         setElapsedTime((prev) => {
           if (prev <= 10) {
             clearInterval(intervalIdRef.current!);
-            POMODOROdone.play();
-            handleTimerEnd(); // ✅ Ensure it only runs once
+            handleTimerEnd();
             return 0;
           }
           return prev - 10;
         });
       }, 10);
     } else {
-      if (intervalIdRef.current !== null) {
-        clearInterval(intervalIdRef.current);
-        intervalIdRef.current = null;
-      }
+      clearInterval(intervalIdRef.current!);
+      intervalIdRef.current = null;
     }
 
-    return () => {
-      if (intervalIdRef.current !== null) {
-        clearInterval(intervalIdRef.current);
-      }
-      hasEnded.current = false; // Reset when unmounting or restarting
-    };
+    return () => clearInterval(intervalIdRef.current!);
   }, [isRunning]);
 
   function start() {
     if (elapsedTime > 0) setIsRunning(true);
-    hasEnded.current = false; // Reset when starting new timer
   }
   function stop() {
     setIsRunning(false);
   }
   function reset() {
-    setElapsedTime(50);
+    setElapsedTime(timerDuration * 60 * 1000);
     setIsRunning(false);
-    hasEnded.current = false; // Reset so next timer works properly
   }
-
   function formatTime() {
     const minutes = Math.floor(elapsedTime / 60000);
     const seconds = Math.floor((elapsedTime % 60000) / 1000);
@@ -85,7 +87,20 @@ function CountdownTimer() {
             Reset
           </button>
         </div>
+        <div className="settings-button-container">
+          <button
+            className="settings-button"
+            onClick={() => setIsSettingsOpen(true)}
+            aria-label="Timer Settings"
+          >
+            ⚙️
+          </button>
+        </div>
       </div>
+      <Settings
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </>
   );
 }
