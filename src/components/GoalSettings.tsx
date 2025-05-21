@@ -1,25 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { usePomodoroStore } from "../store/pomodoroStore";
 
-interface SettingsProps {
+interface GoalSettingsProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
-  const { timerDuration, setTimerDuration, dailyGoal, setDailyGoal } =
-    usePomodoroStore();
-  const [duration, setDuration] = useState(timerDuration);
+const GoalSettings: React.FC<GoalSettingsProps> = ({ isOpen, onClose }) => {
+  const { dailyGoal, setDailyGoal } = usePomodoroStore();
   const [goal, setGoal] = useState(dailyGoal);
 
-  // Update local state when store values change
   useEffect(() => {
-    setDuration(timerDuration);
     setGoal(dailyGoal);
-  }, [timerDuration, dailyGoal]);
+  }, [dailyGoal]);
 
   const handleSave = () => {
-    setTimerDuration(duration);
     setDailyGoal(goal);
     onClose();
   };
@@ -30,23 +25,12 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
     <div className="settings-modal-overlay" onClick={onClose}>
       <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
-          <h3>Timer Settings</h3>
+          <h3>Daily Goal Settings</h3>
           <button className="close-button" onClick={onClose}>
             ×
           </button>
         </div>
         <div className="settings-content">
-          <div className="setting-item">
-            <label>Timer Duration (minutes)</label>
-            <input
-              type="number"
-              min="1"
-              max="120"
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              className="form-control"
-            />
-          </div>
           <div className="setting-item">
             <label>Daily Goal (pomodoros)</label>
             <input
@@ -69,4 +53,4 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
   );
 };
 
-export default Settings;
+export default GoalSettings;

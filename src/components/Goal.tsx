@@ -1,10 +1,12 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { usePomodoroStore } from "../store/pomodoroStore";
+import GoalSettings from "./GoalSettings";
 
 function Goal() {
   const { dailyCount, dailyGoal, resetDailyCount } = usePomodoroStore();
   const hasReached = useRef(false);
   const GOALdone = useRef(new Audio("./sounds/GOALdone2.mp3"));
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Check if goal is reached
   if (dailyCount >= dailyGoal && !hasReached.current) {
@@ -24,7 +26,18 @@ function Goal() {
         >
           Clear
         </button>
+        <button
+          className="settings-button"
+          onClick={() => setIsSettingsOpen(true)}
+          aria-label="Goal Settings"
+        >
+          ⚙️
+        </button>
       </div>
+      <GoalSettings
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }
