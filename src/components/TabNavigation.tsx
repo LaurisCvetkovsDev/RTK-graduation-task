@@ -31,6 +31,14 @@ const TabNavigation = () => {
             Statistics
           </NavLink>
         </li>
+        <li className="nav-item">
+          <NavLink
+            to="/about"
+            className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+          >
+            About
+          </NavLink>
+        </li>
       </ul>
     </div>
   );

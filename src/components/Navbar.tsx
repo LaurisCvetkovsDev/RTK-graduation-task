@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import gif102401 from "../assets/000102401.gif";
+import Comp1Gif from "../assets/Comp 1.gif";
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -17,14 +17,10 @@ const Navbar: React.FC = () => {
       <div className="row w-100">
         <div className="col-md-4">
           <Link to="/" className="navbar-brand">
-            <img src={gif102401} alt="Logo" className="navbar-gif" />
+            <img src={Comp1Gif} alt="Logo" className="navbar-gif" />
           </Link>
         </div>
-        <div className="col-md-4 text-center">
-          <h1 className="mb-0" style={{ color: "wheat" }}>
-            Pomodoro App
-          </h1>
-        </div>
+        <div className="col-md-4 text-center"></div>
         <div className="col-md-4 text-end">
           {user ? (
             <div className="d-flex align-items-center justify-content-end">

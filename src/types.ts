@@ -25,4 +25,6 @@ export interface Friend {
     username?: string;
     avatar_url?: string;
     pomodoros?: number;
+    total_pomodoros?: number;
+    daily_pomodoros?: number;
 } 

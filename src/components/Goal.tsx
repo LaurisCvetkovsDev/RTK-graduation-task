@@ -5,7 +5,7 @@ import GoalSettings from "./GoalSettings";
 function Goal() {
   const { dailyCount, dailyGoal, resetDailyCount } = usePomodoroStore();
   const hasReached = useRef(false);
-  const GOALdone = useRef(new Audio("./sounds/GOALdone2.mp3"));
+  const GOALdone = useRef(new Audio("/pomodoro/sounds/GOALdone2.mp3"));
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Check if goal is reached

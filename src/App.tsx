@@ -16,15 +16,35 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import Friends from "./components/Friends";
 import Goal from "./components/Goal";
 import Stats from "./components/Stats";
+import About from "./components/About";
 import "./font/ShareTechMono-Regular.ttf";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import TopNavigation from "./components/TopNavigation";
 
+const MainLayout = () => (
+  <main className="main-content">
+    <div className="timer-section">
+      <Sidebar />
+    </div>
+    <div className="content-section">
+      <TopNavigation />
+      <div className="tabs-section">
+        <Routes>
+          <Route path="/friends" element={<Friends />} />
+          <Route path="/" element={<Goal />} />
+          <Route path="/stats" element={<Stats />} />
+          <Route path="/about" element={<About />} />
+        </Routes>
+      </div>
+    </div>
+  </main>
+);
+
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename="/pomodoro/">
         <div className="background">
           <div className="app app-container">
             <Navbar />
@@ -40,28 +60,13 @@ const App: React.FC = () => {
                 }
               />
               <Route
-                path="/"
+                path="/*"
                 element={
                   <ProtectedRoute>
-                    <main className="main-content">
-                      <div className="timer-section">
-                        <Sidebar />
-                      </div>
-                      <div className="content-section">
-                        <TopNavigation />
-                        <div className="tabs-section">
-                          <Routes>
-                            <Route path="/friends" element={<Friends />} />
-                            <Route index element={<Goal />} />
-                            <Route path="/stats" element={<Stats />} />
-                          </Routes>
-                        </div>
-                      </div>
-                    </main>
+                    <MainLayout />
                   </ProtectedRoute>
                 }
               />
-              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
         </div>

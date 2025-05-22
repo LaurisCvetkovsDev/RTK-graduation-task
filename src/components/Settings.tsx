@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { usePomodoroStore } from "../store/pomodoroStore";
-import gif102401 from "../assets/000102401.gif";
+// Remove the import for the gif since daily goal is being removed
+// import gif102401 from "../assets/000102401.gif";
 
 interface SettingsProps {
   isOpen: boolean;
@@ -8,20 +9,34 @@ interface SettingsProps {
 }
 
 const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
-  const { timerDuration, setTimerDuration, dailyGoal, setDailyGoal } =
-    usePomodoroStore();
-  const [duration, setDuration] = useState(timerDuration);
-  const [goal, setGoal] = useState(dailyGoal);
+  const {
+    workDuration,
+    setWorkDuration,
+    shortBreakDuration,
+    setShortBreakDuration,
+    // Remove dailyGoal and setDailyGoal from destructuring
+    // dailyGoal,
+    // setDailyGoal,
+  } = usePomodoroStore();
+
+  const [workTime, setWorkTime] = useState(workDuration);
+  const [shortBreak, setShortBreak] = useState(shortBreakDuration);
+  // Remove the state for daily goal
+  // const [goal, setGoal] = useState(dailyGoal);
 
   // Update local state when store values change
   useEffect(() => {
-    setDuration(timerDuration);
-    setGoal(dailyGoal);
-  }, [timerDuration, dailyGoal]);
+    setWorkTime(workDuration);
+    setShortBreak(shortBreakDuration);
+    // Remove setting goal state here
+    // setGoal(dailyGoal);
+  }, [workDuration, shortBreakDuration]); // Remove dailyGoal from dependencies
 
   const handleSave = () => {
-    setTimerDuration(duration);
-    setDailyGoal(goal);
+    setWorkDuration(workTime);
+    setShortBreakDuration(shortBreak);
+    // Remove setting daily goal in store here
+    // setDailyGoal(goal);
     onClose();
   };
 
@@ -38,35 +53,29 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose }) => {
         </div>
         <div className="settings-content">
           <div className="setting-item">
-            <label>Timer Duration (minutes)</label>
+            <label>Work Duration (minutes)</label>
             <input
               type="number"
               min="1"
-              max="120"
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
+              max="60"
+              value={workTime}
+              onChange={(e) => setWorkTime(Number(e.target.value))}
               className="form-control"
             />
           </div>
           <div className="setting-item">
-            <label>
-              Daily Goal (
-              <img
-                src={gif102401}
-                alt="gif"
-                style={{ height: "20px", width: "auto" }}
-              />
-              )
-            </label>
+            <label>Break Duration (minutes)</label>
             <input
               type="number"
               min="1"
-              max="50"
-              value={goal}
-              onChange={(e) => setGoal(Number(e.target.value))}
+              max="30"
+              value={shortBreak}
+              onChange={(e) => setShortBreak(Number(e.target.value))}
               className="form-control"
             />
           </div>
+          {/* Remove Long Break Duration setting */}
+          {/* Remove Daily Goal setting */}
         </div>
         <div className="settings-footer">
           <button className="btn btn-primary" onClick={handleSave}>

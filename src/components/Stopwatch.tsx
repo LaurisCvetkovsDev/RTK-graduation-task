@@ -2,212 +2,211 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { usePomodoroStore } from "../store/pomodoroStore";
 import type { PomodoroState } from "../store/pomodoroStore";
 import Settings from "./Settings";
-import { sessionService } from "../services/api";
-import { PomodoroSession } from "../types";
+import { useAuth } from "../contexts/AuthContext";
+import { pomodoroSessionService } from "../services/api";
+
+// Remove POMODOROS_UNTIL_LONG_BREAK as long breaks are removed
+// const POMODOROS_UNTIL_LONG_BREAK = 4;
 
 function CountdownTimer() {
   const [isRunning, setIsRunning] = useState(false);
   const {
-    timerDuration,
-    setTimerDuration,
+    workDuration,
+    shortBreakDuration,
+    // Remove longBreakDuration as it's no longer in the store
+    // longBreakDuration,
     isWorkPhase,
     togglePhase,
-    workDuration,
-    restDuration,
+    incrementCount,
+    setCompleted,
   } = usePomodoroStore();
-  const [elapsedTime, setElapsedTime] = useState(timerDuration * 60 * 1000);
+
+  // Initialize timeLeft based on work duration
+  const [timeLeft, setTimeLeft] = useState(workDuration * 60 * 1000);
+  // Remove completedPomodoros state as long breaks are not tracked based on completed cycles
+  // const [completedPomodoros, setCompletedPomodoros] = useState(0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const intervalIdRef = useRef<number | null>(null);
-  const POMODOROdone = useRef(new Audio("./sounds/POMODOROdone2-1.mp3"));
-  const incrementCount = usePomodoroStore(
-    (state: PomodoroState) => state.incrementCount
+  const POMODOROdone = useRef(
+    new Audio("/pomodoro/sounds/POMODOROdone2-1.mp3")
   );
-  const initialTimeRef = useRef(timerDuration * 60 * 1000);
-  const totalSetTimeRef = useRef(timerDuration * 60 * 1000);
-  const [remainingWorkPeriods, setRemainingWorkPeriods] = useState(0);
-  const [timeUntilRest, setTimeUntilRest] = useState(workDuration * 60 * 1000);
-  const [completedMinutes, setCompletedMinutes] = useState(0);
-  const [userInput, setUserInput] = useState("");
-  const [error, setError] = useState("");
+  const { user } = useAuth();
 
-  // Mock user ID - replace with actual user ID from auth context
-  const userId = 1;
+  // Ref to track if handleTimerEnd has already executed for the current cycle
+  const hasTimerEndedRef = useRef(false);
 
-  // Calculate remaining work periods
-  const calculateRemainingWorkPeriods = useCallback((totalMinutes: number) => {
-    const workPeriodDuration = 25;
-    const restPeriodDuration = 5;
-    const totalPeriodDuration = workPeriodDuration + restPeriodDuration;
-
-    const completeCycles = Math.floor(totalMinutes / totalPeriodDuration);
-    const remainingMinutes = totalMinutes % totalPeriodDuration;
-
-    let remainingPeriods = completeCycles * 2; // Each cycle has 2 periods (work + rest)
-
-    if (remainingMinutes > 0) {
-      remainingPeriods += 1; // Add the current period
-      if (remainingMinutes > workPeriodDuration) {
-        remainingPeriods += 1; // Add the rest period if we're in it
-      }
-    }
-
-    return remainingPeriods;
-  }, []);
-
-  // Calculate time until next rest
-  const calculateTimeUntilRest = useCallback((currentTime: number) => {
-    const workPeriodDuration = 25 * 60; // 25 minutes in seconds
-    const timeInCurrentPeriod = currentTime % workPeriodDuration;
-    return workPeriodDuration - timeInCurrentPeriod;
-  }, []);
-
-  // Update elapsed time when timer duration changes
+  // Set initial timeLeft based on the current phase from the store
+  // Simplified useEffect as there's only one break duration
   useEffect(() => {
-    setElapsedTime(timerDuration * 60 * 1000);
-    initialTimeRef.current = timerDuration * 60 * 1000;
-    totalSetTimeRef.current = timerDuration * 60 * 1000;
-    setRemainingWorkPeriods(
-      calculateRemainingWorkPeriods(timerDuration * 60 * 1000)
-    );
-    setTimeUntilRest(workDuration * 60 * 1000);
-  }, [timerDuration]);
-
-  const handleTimerEnd = () => {
-    if (localStorage.getItem("timerUpdated") === "true") return;
-    localStorage.setItem("timerUpdated", "true");
-
-    // Calculate completed minutes only during work phase
     if (isWorkPhase) {
-      const completedMinutes = Math.floor(
-        (initialTimeRef.current - elapsedTime) / (60 * 1000)
-      );
-      if (completedMinutes > 0) {
-        incrementCount(completedMinutes);
-        POMODOROdone.current.play();
-      }
+      setTimeLeft(workDuration * 60 * 1000);
+    } else {
+      setTimeLeft(shortBreakDuration * 60 * 1000);
     }
+  }, [isWorkPhase, workDuration, shortBreakDuration]); // Remove longBreakDuration and completedPomodoros from dependencies
 
-    // Toggle phase and reset timer
-    togglePhase();
-    setElapsedTime(timerDuration * 60 * 1000);
-    initialTimeRef.current = timerDuration * 60 * 1000;
-    setTimeUntilRest(isWorkPhase ? 0 : workDuration * 60 * 1000);
+  // Remove the second useEffect that updates timeLeft based on workDuration change (redundant with the first one)
+  // useEffect(() => {
+  //   if (isWorkPhase) {
+  //     setTimeLeft(workDuration * 60 * 1000);
+  //   }
+  // }, [workDuration, isWorkPhase]);
 
-    setTimeout(() => {
-      localStorage.removeItem("timerUpdated");
-    }, 2000);
-  };
+  const handleTimerEnd = useCallback(async () => {
+    // Prevent double execution
+    if (hasTimerEndedRef.current) {
+      return;
+    }
+    hasTimerEndedRef.current = true;
+
+    if (isWorkPhase) {
+      // Work phase ended
+
+      // ** Save completed session to backend **
+      if (user) {
+        const endTime = new Date();
+        // Use the current workDuration from the store directly
+        const currentWorkDuration = usePomodoroStore.getState().workDuration;
+        const startTime = new Date(
+          endTime.getTime() - currentWorkDuration * 60 * 1000
+        ); // Estimate start time
+
+        try {
+          await pomodoroSessionService.createSession({
+            user_id: user.id,
+            start_time: startTime.toISOString(),
+            end_time: endTime.toISOString(),
+            duration: currentWorkDuration * 60, // Duration in seconds
+            is_completed: true, // Mark as completed
+          });
+          console.log("Pomodoro session saved successfully.");
+          // Use the current incrementCount from the store directly
+          usePomodoroStore.getState().incrementCount(currentWorkDuration);
+          // Set isCompleted to true to trigger Friends component update
+          usePomodoroStore.getState().setCompleted(true);
+          // Reset isCompleted after a short delay
+          setTimeout(() => {
+            usePomodoroStore.getState().setCompleted(false);
+          }, 1000);
+        } catch (error: any) {
+          // Explicitly type error
+          console.error("Failed to save pomodoro session:", error);
+          // Optionally handle error on the UI, but still proceed with phase toggle
+          // We still increment frontend count for user feedback even if backend save fails for now
+          usePomodoroStore.getState().incrementCount(currentWorkDuration);
+        }
+      } else {
+        console.warn("User not logged in. Cannot save pomodoro session.");
+        // Use the current incrementCount from the store directly
+        usePomodoroStore
+          .getState()
+          .incrementCount(usePomodoroStore.getState().workDuration);
+      }
+
+      POMODOROdone.current.play();
+
+      // Use the current break duration from the store directly
+      const currentShortBreakDuration =
+        usePomodoroStore.getState().shortBreakDuration;
+      setTimeLeft(currentShortBreakDuration * 60 * 1000);
+      // Use the current togglePhase from the store directly
+      usePomodoroStore.getState().togglePhase();
+      setIsRunning(false); // Explicitly stop the timer
+    } else {
+      // Break ended
+      // Transition back to work phase with work duration
+      // Use the current workDuration from the store directly
+      const currentWorkDuration = usePomodoroStore.getState().workDuration;
+      setTimeLeft(currentWorkDuration * 60 * 1000);
+      // Use the current togglePhase from the store directly
+      usePomodoroStore.getState().togglePhase();
+      setIsRunning(false); // Explicitly stop the timer
+    }
+  }, [isWorkPhase, user]); // Reduced dependencies
+
+  // Ref to hold the latest handleTimerEnd function
+  const handleTimerEndRef = useRef(handleTimerEnd);
+
+  useEffect(() => {
+    handleTimerEndRef.current = handleTimerEnd; // Update the ref whenever handleTimerEnd changes
+  }, [handleTimerEnd]);
 
   useEffect(() => {
     if (isRunning) {
       intervalIdRef.current = window.setInterval(() => {
-        setElapsedTime((prev) => {
-          if (prev <= 10) {
-            clearInterval(intervalIdRef.current!);
-            handleTimerEnd();
-            return 0;
+        setTimeLeft((prev) => {
+          // Calculate next time
+          const nextTime = prev - 1000;
+
+          // If timer reaches zero or goes below it for the first time in this cycle
+          if (nextTime <= 0 && intervalIdRef.current !== null) {
+            // Check if interval is still active
+            clearInterval(intervalIdRef.current);
+            intervalIdRef.current = null; // Clear the ref immediately
+            handleTimerEndRef.current(); // Trigger the end handler via ref
+            return 0; // Set time to exactly 0
           }
-          const newTime = prev - 10;
-          // Update remaining work periods and time until rest
-          setRemainingWorkPeriods(calculateRemainingWorkPeriods(newTime));
-          setTimeUntilRest(calculateTimeUntilRest(newTime));
-          return newTime;
+
+          if (nextTime < 0) {
+            return 0; // Prevent negative time
+          }
+
+          return nextTime; // Continue counting down
         });
-      }, 10);
+      }, 1000);
     } else {
-      clearInterval(intervalIdRef.current!);
-      intervalIdRef.current = null;
+      // Clear interval if timer is stopped manually
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
+      }
     }
 
-    return () => clearInterval(intervalIdRef.current!);
-  }, [isRunning]);
+    // Cleanup function to clear interval on unmount or when isRunning changes to false
+    return () => {
+      if (intervalIdRef.current) {
+        clearInterval(intervalIdRef.current);
+        intervalIdRef.current = null;
+      }
+    };
+  }, [isRunning]); // Removed handleTimerEnd from dependencies
 
   function start() {
-    if (elapsedTime > 0) {
+    if (timeLeft > 0) {
       setIsRunning(true);
-      initialTimeRef.current = elapsedTime;
     }
   }
 
   function stop() {
-    if (isRunning) {
-      // Calculate completed minutes only during work phase
-      if (isWorkPhase) {
-        const completedMinutes = Math.floor(
-          (initialTimeRef.current - elapsedTime) / (60 * 1000)
-        );
-        if (completedMinutes > 0) {
-          incrementCount(completedMinutes);
-        }
-      }
-    }
     setIsRunning(false);
   }
 
   function reset() {
-    setElapsedTime(timerDuration * 60 * 1000);
-    initialTimeRef.current = timerDuration * 60 * 1000;
-    totalSetTimeRef.current = timerDuration * 60 * 1000;
-    setRemainingWorkPeriods(
-      calculateRemainingWorkPeriods(timerDuration * 60 * 1000)
-    );
-    setTimeUntilRest(workDuration * 60 * 1000);
     setIsRunning(false);
+    setTimeLeft(usePomodoroStore.getState().workDuration * 60 * 1000); // Use store state directly
+    // Reset the hasTimerEndedRef when resetting the timer
+    hasTimerEndedRef.current = false;
+    // Remove resetting completedPomodoros
+    // setCompletedPomodoros(0);
   }
 
   function formatTime(timeInMs: number) {
     const minutes = Math.floor(timeInMs / 60000);
     const seconds = Math.floor((timeInMs % 60000) / 1000);
-    const milliseconds = Math.floor((timeInMs % 1000) / 10);
-
     return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
       2,
       "0"
-    )}:${String(milliseconds).padStart(2, "0")}`;
+    )}`;
   }
 
-  const handleStart = () => {
-    if (!userInput) {
-      setError("Please enter a duration");
-      return;
-    }
-    const minutes = parseInt(userInput);
-    if (isNaN(minutes) || minutes <= 0) {
-      setError("Please enter a valid duration");
-      return;
-    }
-    setError("");
-    setIsRunning(true);
-    setRemainingWorkPeriods(calculateRemainingWorkPeriods(minutes));
+  const getPhaseColor = () => {
+    if (isWorkPhase) return "#ff6b6b"; // Red for work
+    return "#4a90e2"; // Blue for break (no distinction between short/long)
   };
 
-  const handleStop = async () => {
-    setIsRunning(false);
-
-    // Save the session to the backend
-    try {
-      const session: Omit<PomodoroSession, "id"> = {
-        user_id: userId,
-        start_time: new Date(Date.now() - elapsedTime / 1000).toISOString(),
-        end_time: new Date().toISOString(),
-        duration: elapsedTime,
-        is_completed: completedMinutes >= 25,
-      };
-
-      await sessionService.createSession(session);
-    } catch (err) {
-      console.error("Failed to save session:", err);
-    }
-
-    // Reset the timer
-    setElapsedTime(timerDuration * 60 * 1000);
-    initialTimeRef.current = timerDuration * 60 * 1000;
-    setRemainingWorkPeriods(
-      calculateRemainingWorkPeriods(timerDuration * 60 * 1000)
-    );
-    setTimeUntilRest(workDuration * 60 * 1000);
-    setCompletedMinutes(0);
-    setUserInput("");
+  const getPhaseText = () => {
+    if (isWorkPhase) return "Work Time";
+    return "Break";
   };
 
   return (
@@ -216,19 +215,16 @@ function CountdownTimer() {
         <div
           className="phase-indicator"
           style={{
-            color: isWorkPhase ? "#ff6b6b" : "#4a90e2",
+            color: getPhaseColor(),
             marginBottom: "10px",
             fontSize: "1.2rem",
           }}
         >
-          {isWorkPhase ? "Work Time" : "Rest Time"}
+          {getPhaseText()}
         </div>
-        <div className="display">
-          {isWorkPhase
-            ? formatTime(timeUntilRest)
-            : formatTime(restDuration * 60 * 1000)}
-        </div>
-        <div
+        <div className="display">{formatTime(timeLeft)}</div>
+        {/* Remove the remaining periods display */}
+        {/* <div
           className="remaining-periods"
           style={{
             color: "wheat",
@@ -236,9 +232,9 @@ function CountdownTimer() {
             fontSize: "1.1rem",
           }}
         >
-          {remainingWorkPeriods} work period
-          {remainingWorkPeriods !== 1 ? "s" : ""} remaining
-        </div>
+          {completedPomodoros} of {POMODOROS_UNTIL_LONG_BREAK} pomodoros
+          completed
+        </div> */}
         <div className="controls">
           <button onClick={start} className="start-button btn btn-primary">
             Start

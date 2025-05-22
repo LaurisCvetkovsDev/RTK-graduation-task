@@ -72,16 +72,15 @@ export const sessionService = {
 
 // Friend Services
 export const friendService = {
-    async addFriend(userId: number, friendId: number): Promise<Friend> {
-        const response = await fetch(`${API_URL}/friend_actions.php`, {
+    async addFriend(userId: number, friendUsername: string): Promise<Friend> {
+        const response = await fetch(`${API_URL}/friend_actions.php?action=add`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                action: 'add',
                 user_id: userId,
-                friend_id: friendId,
+                friend_username: friendUsername,
             }),
         });
         const data = await response.json();
@@ -90,13 +89,12 @@ export const friendService = {
     },
 
     async acceptFriend(userId: number, friendId: number): Promise<Friend> {
-        const response = await fetch(`${API_URL}/friend_actions.php`, {
+        const response = await fetch(`${API_URL}/friend_actions.php?action=accept`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                action: 'accept',
                 user_id: userId,
                 friend_id: friendId,
             }),
@@ -107,13 +105,12 @@ export const friendService = {
     },
 
     async removeFriend(userId: number, friendId: number): Promise<void> {
-        const response = await fetch(`${API_URL}/friend_actions.php`, {
+        const response = await fetch(`${API_URL}/friend_actions.php?action=remove`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                action: 'remove',
                 user_id: userId,
                 friend_id: friendId,
             }),
@@ -123,18 +120,35 @@ export const friendService = {
     },
 
     async getFriends(userId: number): Promise<Friend[]> {
-        const response = await fetch(`${API_URL}/friend_actions.php`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'list',
-                user_id: userId,
-            }),
-        });
+        const response = await fetch(`${API_URL}/friend_actions.php?action=list&user_id=${userId}`);
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
-        return data.friends;
+        return data;
     },
-}; 
+};
+
+// New service for Pomodoro Sessions
+export const pomodoroSessionService = {
+    createSession: async (sessionData: { user_id: number; start_time: string; end_time: string; duration: number; is_completed: boolean }) => {
+        try {
+            const response = await fetch(`${API_URL}/create_session.php`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(sessionData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create pomodoro session');
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error creating pomodoro session:', error);
+            throw error;
+        }
+    },
+    // Add other pomodoro session related functions here if needed
+};
