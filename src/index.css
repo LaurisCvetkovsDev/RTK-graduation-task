@@ -10,3 +10,33 @@
     color:wheat !important;
   }
  
+/* Compact mode styles */
+.stopWatch.compact-mode {
+  padding: 8px;
+  background: #23272f;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.stopWatch.compact-mode .controls {
+  gap: 4px;
+}
+
+.stopWatch.compact-mode .controls button {
+  padding: 4px 8px;
+  font-size: 0.9rem;
+}
+
+.stopWatch.compact-mode .phase-indicator {
+  margin-bottom: 4px;
+}
+
+/* Make the compact window draggable */
+.stopWatch.compact-mode {
+  -webkit-app-region: drag;
+}
+
+.stopWatch.compact-mode .controls button {
+  -webkit-app-region: no-drag;
+}
+ 

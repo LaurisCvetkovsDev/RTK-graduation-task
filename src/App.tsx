@@ -6,6 +6,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { TimerProvider } from "./contexts/TimerContext";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import LoginForm from "./components/Auth/LoginForm";
 import RegisterForm from "./components/Auth/RegisterForm";
@@ -19,58 +20,51 @@ import Stats from "./components/Stats";
 import About from "./components/About";
 import "./font/ShareTechMono-Regular.ttf";
 import Navbar from "./components/Navbar";
-import Sidebar from "./components/Sidebar";
 import TopNavigation from "./components/TopNavigation";
-
-const MainLayout = () => (
-  <main className="main-content">
-    <div className="timer-section">
-      <Sidebar />
-    </div>
-    <div className="content-section">
-      <TopNavigation />
-      <div className="tabs-section">
-        <Routes>
-          <Route path="/friends" element={<Friends />} />
-          <Route path="/" element={<Goal />} />
-          <Route path="/stats" element={<Stats />} />
-          <Route path="/about" element={<About />} />
-        </Routes>
-      </div>
-    </div>
-  </main>
-);
+import Stopwatch from "./components/Stopwatch";
 
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <Router basename="/pomodoro/">
-        <div className="background">
-          <div className="app app-container">
-            <Navbar />
-            <Routes>
-              <Route path="/login" element={<LoginForm />} />
-              <Route path="/register" element={<RegisterForm />} />
-              <Route
-                path="/reset-password"
-                element={
-                  <ProtectedRoute>
-                    <ResetPasswordForm />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
+      <TimerProvider>
+        <Router>
+          <div className="background">
+            <div className="app app-container">
+              <Navbar />
+              <Routes>
+                <Route path="/login" element={<LoginForm />} />
+                <Route path="/register" element={<RegisterForm />} />
+                <Route path="/reset-password" element={<ResetPasswordForm />} />
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <div className="app-content">
+                        <div className="stopwatch-container">
+                          <Stopwatch />
+                        </div>
+                        <div className="main-content-wrapper">
+                          <TopNavigation />
+                          <div className="main-content-area">
+                            <div className="tab-content">
+                              <Routes>
+                                <Route path="/friends" element={<Friends />} />
+                                <Route path="/" element={<Goal />} />
+                                <Route path="/stats" element={<Stats />} />
+                                <Route path="/about" element={<About />} />
+                              </Routes>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </div>
           </div>
-        </div>
-      </Router>
+        </Router>
+      </TimerProvider>
     </AuthProvider>
   );
 };

@@ -1,6 +1,6 @@
 import { User, PomodoroSession, Friend } from '../types';
 
-const API_URL = 'http://localhost/POMODOROapp/backend/api';
+const API_URL = 'https://laucve1.dreamhosters.com/backend/api';
 
 // Auth Services
 export const authService = {

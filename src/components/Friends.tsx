@@ -37,7 +37,7 @@ const Friends: React.FC = () => {
   const loadUserCounts = async (userId: number) => {
     try {
       const response = await fetch(
-        `http://localhost/POMODOROapp/backend/api/friend_actions.php?action=get_user_counts&user_id=${userId}`
+        `https://laucve1.dreamhosters.com/backend/api/friend_actions.php?action=get_user_counts&user_id=${userId}`
       );
       if (!response.ok) throw new Error("Failed to fetch user counts");
       const data = await response.json();
